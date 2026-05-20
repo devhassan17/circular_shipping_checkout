@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_cs" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.circular_shipping</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Circular Shipping"
+                     string="Circular Shipping"
+                     name="circular_shipping_checkout"
+                     logo="/circular_shipping_checkout/static/description/icon.png">
+
+                    <block title="Plugin status">
+                        <div class="col-12 col-lg-6 px-3 pb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">Circular Shipping inschakelen</div>
+                                    <small class="text-muted">
+                                        Wanneer uitgeschakeld gedraagt de webshop zich alsof de plugin niet geïnstalleerd is —
+                                        geen widget, geen verpakkingsopties, geen productfilters.
+                                    </small>
+                                </div>
+                                <field name="cs_enabled" widget="boolean_toggle"/>
+                            </div>
+                        </div>
+                    </block>
+
+                    <block title="Verpakkingskeuze">
+                        <div class="col-12 col-lg-6 px-3 pb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">Testmodus</div>
+                                    <small class="text-muted">Widget verschijnt bij elk geldig NL postcode (geen API-sleutel nodig).</small>
+                                </div>
+                                <field name="cs_test_mode" widget="boolean_toggle"/>
+                            </div>
+                        </div>
+                        <setting string="BOXO API-sleutel" help="Alleen nodig als testmodus uit staat.">
+                            <field name="boxo_api_key" placeholder="Vul hier uw BOXO API-sleutel in"/>
+                        </setting>
+                        <setting string="BOXO API URL" help="Productie: https://api.boxo.nu — Sandbox: https://sandbox-api.boxo.nu">
+                            <field name="boxo_api_url" placeholder="https://api.boxo.nu"/>
+                        </setting>
+                        <setting string="CSC Box afbeelding URL" help="URL van de afbeelding die in de widget naast de statiegeld-optie getoond wordt. Leeg = productafbeelding wordt verwijderd.">
+                            <field name="cs_box_image_url"/>
+                        </setting>
+                        <div class="col-12 col-lg-6 px-3 pb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">Contrast mode widget</div>
+                                    <small class="text-muted">Toont de verpakkingswidget met een roze achtergrond en roze rand.</small>
+                                </div>
+                                <field name="cs_dark_mode" widget="boolean_toggle"/>
+                            </div>
+                        </div>
+                    </block>
+
+                    <block title="Prijzen">
+                        <setting string="Borg herbruikbaar (EUR)" help="Het borgbedrag voor herbruikbare verpakking is vastgesteld en kan niet worden gewijzigd.">
+                            <field name="cs_deposit_amount" readonly="1"/>
+                        </setting>
+                        <setting string="Toeslag wegwerp (EUR)" help="Opslag die bij wegwerpverpakking in rekening wordt gebracht.">
+                            <field name="cs_single_use_fee"/>
+                        </setting>
+                        <setting string="Prijsmodel" help="Bepaalt hoe de verpakkingskosten worden berekend.">
+                            <field name="cs_pricing_model"/>
+                        </setting>
+                    </block>
+
+                    <block title="Bezorging">
+                        <setting string="Bezorgmethode (statiegeld)" help="Bezorgmethode die automatisch wordt geselecteerd wanneer de klant Statiegeld verpakking kiest. Leeg = geen automatische omschakeling.">
+                            <field name="cs_office_delivery_carrier_id" options="{'no_create': True}"/>
+                        </setting>
+                    </block>
+
+                    <block title="Standaardinstellingen">
+                        <setting string="Standaard selectie" help="Vooraf geselecteerde verpakkingskeuze bij het laden van de checkout.">
+                            <field name="cs_default_selection"/>
+                        </setting>
+                        <setting string="A/B test ingeschakeld (niet actief)"
+                                 help="A/B testen is momenteel uitgeschakeld — er is nog geen rapportage beschikbaar.">
+                            <field name="cs_ab_test_enabled" widget="boolean_toggle" readonly="1"/>
+                            <div class="content-group mt8" invisible="not cs_ab_test_enabled">
+                                <label for="cs_ab_split_ratio" string="Split ratio (0–1)"/>
+                                <field name="cs_ab_split_ratio" readonly="1"/>
+                            </div>
+                        </setting>
+                    </block>
+
+                    <block title="Info popup">
+                        <div class="col-12 px-3 pb-3">
+                            <p class="text-muted small mb-3">Verschijnt als de klant op het ⓘ-icoontje klikt. Per taal (NL/EN/DE) apart instelbaar.</p>
+                            <div class="row g-3">
+                                <div class="col-4">
+                                    <div class="fw-bold mb-1">Nederlands (NL)</div>
+                                    <field name="cs_popup_text_nl" widget="html"/>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold mb-1">English (EN)</div>
+                                    <field name="cs_popup_text_en" widget="html"/>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold mb-1">Deutsch (DE)</div>
+                                    <field name="cs_popup_text_de" widget="html"/>
+                                </div>
+                            </div>
+                        </div>
+                    </block>
+
+                    <block title="Uitleg opties">
+                        <div class="col-12 px-3 pb-3">
+                            <p class="text-muted small mb-3">Éénregelige toelichting onder elke keuze in de widget. Per taal (NL/EN/DE) apart instelbaar.</p>
+                            <div class="row g-3 mb-3">
+                                <div class="col-12"><div class="fw-bold">Statiegeld verpakking</div></div>
+                                <div class="col-4">
+                                    <div class="fw-bold small mb-1">Nederlands (NL)</div>
+                                    <field name="cs_explainer_reusable_nl" placeholder="Bijv. Je borg wordt geretourneerd bij inlevering"/>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold small mb-1">English (EN)</div>
+                                    <field name="cs_explainer_reusable_en" placeholder="E.g. Your deposit is returned when packaging is collected"/>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold small mb-1">Deutsch (DE)</div>
+                                    <field name="cs_explainer_reusable_de" placeholder="z.B. Ihr Pfand wird bei Rückgabe erstattet"/>
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-12"><div class="fw-bold">Wegwerpverpakking</div></div>
+                                <div class="col-4">
+                                    <div class="fw-bold small mb-1">Nederlands (NL)</div>
+                                    <field name="cs_explainer_single_use_nl" placeholder="Bijv. Standaard bezorgverpakking"/>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold small mb-1">English (EN)</div>
+                                    <field name="cs_explainer_single_use_en" placeholder="E.g. Standard delivery packaging"/>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold small mb-1">Deutsch (DE)</div>
+                                    <field name="cs_explainer_single_use_de" placeholder="z.B. Standard Lieferverpackung"/>
+                                </div>
+                            </div>
+                        </div>
+                    </block>
+
+                    <block title="Productfilter">
+                        <setting string="Modus" help="Bepaalt welke producten in aanmerking komen voor herbruikbare verpakking.">
+                            <field name="cs_product_allow_mode" widget="radio"/>
+                        </setting>
+                        <setting string="Uitgesloten producten"
+                                 invisible="cs_product_allow_mode != 'exclude'"
+                                 help="Producten in deze lijst worden uitgesloten van de CS widget.">
+                            <field name="cs_excluded_product_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   domain="[('active', '=', True)]"/>
+                        </setting>
+                        <div class="col-12 col-lg-6 px-3 pb-3" invisible="cs_product_allow_mode != 'include'">
+                            <label for="cs_included_product_ids" class="o_form_label fw-bold">Toegestane producten</label>
+                            <p class="text-muted small mb-2">De CS widget is alleen zichtbaar wanneer de bestelling uitsluitend producten uit deze lijst bevat.</p>
+                            <field name="cs_included_product_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   domain="[('active', '=', True)]"/>
+                        </div>
+                        <setting string="Vereist aantal"
+                                 invisible="cs_product_allow_mode != 'include'"
+                                 help="Totaal aantal stuks van de toegestane producten dat exact in de bestelling aanwezig moet zijn. 0 = geen kwantiteitseis.">
+                            <field name="cs_required_total_qty"/>
+                        </setting>
+                    </block>
+
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

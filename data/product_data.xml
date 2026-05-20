@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_packaging_deposit" model="product.template">
+        <field name="name">Statiegeld verpakking</field>
+        <field name="type">service</field>
+        <field name="list_price">3.95</field>
+        <field name="sale_ok" eval="False"/>
+        <field name="purchase_ok" eval="False"/>
+        <field name="taxes_id" eval="[]"/>
+    </record>
+
+    <record id="product_single_use_fee" model="product.template">
+        <field name="name">Toeslag wegwerpverpakking</field>
+        <field name="type">service</field>
+        <field name="list_price">0.25</field>
+        <field name="sale_ok" eval="False"/>
+        <field name="purchase_ok" eval="False"/>
+        <field name="taxes_id" eval="[]"/>
+    </record>
+
+    <record id="product_cs_box" model="product.template">
+        <field name="name">CIRCULAR SHIPPING BOX</field>
+        <field name="type">consu</field>
+        <field name="list_price">0.00</field>
+        <field name="sale_ok" eval="False"/>
+        <field name="purchase_ok" eval="False"/>
+        <field name="taxes_id" eval="[]"/>
+        <!-- Place csc_box.png (or .jpg) at static/src/img/ before upgrading the module. -->
+        <field name="image_1920" type="base64" file="circular_shipping_checkout/static/src/img/csc_box.png"/>
+    </record>
+
+    <record id="product_statiegeld_discount" model="product.template">
+        <field name="name">Korting statiegeld verpakking</field>
+        <field name="type">service</field>
+        <field name="list_price">0.00</field>
+        <field name="sale_ok" eval="False"/>
+        <field name="purchase_ok" eval="False"/>
+        <field name="taxes_id" eval="[]"/>
+    </record>
+</odoo>

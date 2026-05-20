@@ -1,0 +1,54 @@
+# Translation of circular_shipping_checkout to Dutch
+# Copyright (C) 2026 Circular Shipping
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0\n"
+"Report-Msgid-Bugs-To: \n"
+"Language: nl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. module: circular_shipping_checkout
+msgid "Statiegeld verpakking"
+msgstr "Statiegeld verpakking"
+
+#. module: circular_shipping_checkout
+msgid "Wegwerpverpakking"
+msgstr "Wegwerpverpakking"
+
+#. module: circular_shipping_checkout
+msgid "Kies je verzendverpakking"
+msgstr "Kies je verzendverpakking"
+
+#. module: circular_shipping_checkout
+msgid "Toeslag wegwerpverpakking"
+msgstr "Toeslag wegwerpverpakking"
+
+#. module: circular_shipping_checkout
+msgid "Korting statiegeld verpakking"
+msgstr "Korting statiegeld verpakking"
+
+#. module: circular_shipping_checkout
+msgid "Verpakkingskeuze"
+msgstr "Verpakkingskeuze"
+
+#. module: circular_shipping_checkout
+msgid "Circular Shipping — Verpakkingskeuze"
+msgstr "Circular Shipping — Verpakkingskeuze"
+
+#. module: circular_shipping_checkout
+msgid "Testmodus"
+msgstr "Testmodus"
+
+#. module: circular_shipping_checkout
+msgid "Standaard selectie"
+msgstr "Standaard selectie"
+
+#. module: circular_shipping_checkout
+msgid "Prijsmodel"
+msgstr "Prijsmodel"
+
+#. module: circular_shipping_checkout
+msgid "A/B test ingeschakeld"
+msgstr "A/B test ingeschakeld"

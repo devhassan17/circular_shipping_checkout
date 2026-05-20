@@ -1,0 +1,5 @@
+/* Widen the Productfilter setting so the inline table has room */
+.cs-productfilter-wide .o_setting_right_pane {
+    flex: 4;
+    max-width: 80%;
+}

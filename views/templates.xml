@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Deposit row in the order totals table ─────────────────────────────────
+         Only visible on /shop/payment (cs_show_packaging_row gate).
+         Always rendered on that page so JS can show/hide it live.
+         Shows the deposit amount (€3.95) for reusable; hidden for single-use. -->
+    <template id="total_cs_packaging" name="Circular Shipping Deposit Row" inherit_id="website_sale.total">
+        <xpath expr="//tr[@id='order_total_untaxed']" position="before">
+            <tr t-if="cs_show_packaging_row and website_sale_order"
+                id="order_cs_packaging"
+                t-att-style="'' if website_sale_order.cs_amount_packaging else 'display: none;'">
+                <td colspan="2" class="ps-0 pt-0 pb-2 border-0 text-muted"
+                    t-esc="cs_packaging_label or 'Deposit'"/>
+                <td class="text-end pe-0 pt-0 pb-2 border-0 text-muted">
+                    <span t-field="website_sale_order.cs_amount_packaging"
+                          class="monetary_field"
+                          style="white-space: nowrap;"
+                          t-options='{"widget": "monetary", "display_currency": website_sale_order.currency_id}'/>
+                </td>
+            </tr>
+        </xpath>
+    </template>
+
+    <!-- ── Inject packaging widget on the delivery page, between delivery methods
+         and billing address.
+         In Odoo 18 the checkout template uses t-call sub-templates; we target
+         the billing_address_row t-call directly. ──────────────────────────── -->
+    <template id="packaging_widget_inject" inherit_id="website_sale.checkout" name="Circular Shipping Packaging Widget">
+        <xpath expr="//t[@t-call='website_sale.billing_address_row']" position="before">
+            <t t-if="cs_show_packaging_row" t-call="circular_shipping_checkout.packaging_widget"/>
+        </xpath>
+    </template>
+
+    <!-- ── Surcharge row in the order totals table ───────────────────────────────
+         Only visible on /shop/payment (cs_show_packaging_row gate).
+         Always rendered so JS can show/hide it live.
+         Shows the single-use surcharge; hidden when reusable is selected. -->
+    <template id="total_cs_surcharge" name="Circular Shipping Surcharge Row" inherit_id="website_sale.total">
+        <xpath expr="//tr[@id='order_total_untaxed']" position="before">
+            <tr t-if="cs_show_packaging_row and website_sale_order"
+                id="order_cs_surcharge"
+                t-att-style="'' if website_sale_order.cs_amount_surcharge else 'display: none;'">
+                <td colspan="2" class="ps-0 pt-0 pb-2 border-0 text-muted">
+                    <t t-if="cs_lang == 'nl'">Toeslag wegwerpverpakking</t>
+                    <t t-elif="cs_lang == 'de'">Aufpreis Einwegverpackung</t>
+                    <t t-else="">Single-use surcharge</t>
+                </td>
+                <td class="text-end pe-0 pt-0 pb-2 border-0 text-muted">
+                    <span t-field="website_sale_order.cs_amount_surcharge"
+                          class="monetary_field"
+                          style="white-space: nowrap;"
+                          t-options='{"widget": "monetary", "display_currency": website_sale_order.currency_id}'/>
+                </td>
+            </tr>
+        </xpath>
+    </template>
+
+    <!-- ── Hidden data carrier for the info-popup on the payment page ──────────────
+         Provides popup HTML and product identifiers to JS when the packaging
+         widget itself is not rendered (payment page has no choice widget).
+         Injected into the totals table so it is always present on /shop/payment.
+         display:none keeps it invisible; JS reads data-* attributes and innerHTML. -->
+    <template id="payment_popup_data" inherit_id="website_sale.total"
+              name="Circular Shipping Payment Popup Data">
+        <xpath expr="//tr[@id='order_total_untaxed']" position="before">
+            <t t-if="cs_show_packaging_row and cs_popup_text and cs_box_product_id">
+                <tr id="cs-payment-popup-data"
+                    style="display:none"
+                    t-att-data-cs-box-product-id="cs_box_product_id or 0"
+                    t-att-data-cs-box-product-name="cs_box_product_name or ''">
+                    <td colspan="3">
+                        <div class="cs-info-popup">
+                            <t t-out="cs_popup_text"/>
+                        </div>
+                    </td>
+                </tr>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- ── The packaging choice widget ─────────────────────────────────────────── -->
+    <template id="packaging_widget" name="Circular Shipping Packaging Widget">
+        <t t-set="_cs_cfg" t-value="cs_packaging_config if cs_packaging_config else {}"/>
+        <div id="cs-packaging-widget"
+             t-att-class="'cs-widget cs-dark' if cs_dark_mode else 'cs-widget'"
+             t-att-data-deposit="_cs_cfg.get('deposit_amount', 3.95)"
+             t-att-data-fee="_cs_cfg.get('single_use_fee', 0.25)"
+             t-att-data-model="_cs_cfg.get('pricing_model', 'direct')"
+             t-att-data-default="_cs_cfg.get('default_selection', 'single_use')"
+             t-att-data-test-mode="'True' if cs_test_mode else 'False'"
+             t-att-data-postcode="cs_partner_zip or ''"
+             t-att-data-selected="cs_packaging_choice or ''"
+             t-att-data-lang="cs_lang or 'en'"
+             t-att-data-ab-variant="cs_ab_variant or ''"
+             t-att-data-cs-box-product-id="cs_box_product_id or 0"
+             t-att-data-cs-box-product-name="cs_box_product_name or ''">
+
+            <h4 class="fs-6 small text-uppercase fw-bolder">
+                <t t-if="cs_lang == 'nl'">Kies je verzendverpakking</t>
+                <t t-elif="cs_lang == 'de'">Wähle deine Versandverpackung</t>
+                <t t-else="">Choose your shipping packaging</t>
+            </h4>
+
+            <div class="cs-options-group">
+
+                <!-- Reusable / deposit option -->
+                <label class="cs-option-row cs-reusable-row" for="cs_reusable">
+                    <div class="row flex-column flex-md-row flex-grow-1 gap-lg-3">
+                        <div class="col">
+                            <div class="d-flex form-check mb-0 gap-2">
+                                <input class="form-check-input position-absolute" type="radio"
+                                       name="cs_packaging_choice"
+                                       id="cs_reusable"
+                                       value="reusable"
+                                       t-att-checked="'checked' if cs_packaging_choice == 'reusable' else None"/>
+                                <span class="cs-option-name">
+                                    <t t-if="cs_lang == 'nl'">Statiegeld verpakking</t>
+                                    <t t-elif="cs_lang == 'de'">Pfandverpackung</t>
+                                    <t t-else="">Deposit packaging</t>
+                                </span>
+                                <t t-if="cs_popup_text">
+                                    <span class="cs-info-wrapper">
+                                        <button type="button"
+                                                class="cs-info-btn"
+                                                id="cs-info-toggle"
+                                                t-att-aria-label="'Meer informatie' if cs_lang == 'nl' else ('Mehr Informationen' if cs_lang == 'de' else 'More information')"
+                                                aria-expanded="false">i</button>
+                                        <div class="cs-info-popup" id="cs-info-popup">
+                                            <t t-out="cs_popup_text"/>
+                                        </div>
+                                    </span>
+                                </t>
+                            </div>
+                        </div>
+                        <div class="col col-auto">
+                            <span class="o_wsale_delivery_price_badge float-end fw-bold" name="price">
+                                €&#160;<span class="oe_currency_value">
+                                    <t t-if="cs_lang in ('nl', 'de')">0,00</t>
+                                    <t t-else="">0.00</t>
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                    <t t-if="cs_explainer_reusable">
+                        <div class="text-muted mt-1"><t t-esc="cs_explainer_reusable"/></div>
+                    </t>
+                </label>
+
+                <hr class="cs-option-divider"/>
+
+                <!-- Single-use option -->
+                <t t-set="_fee_val" t-value="('%.2f' % _cs_cfg.get('single_use_fee', 0.25)).replace('.', ',') if cs_lang in ('nl', 'de') else '%.2f' % _cs_cfg.get('single_use_fee', 0.25)"/>
+                <label class="cs-option-row" for="cs_single_use">
+                    <div class="row flex-column flex-md-row flex-grow-1 gap-lg-3">
+                        <div class="col">
+                            <div class="d-flex form-check mb-0 gap-2">
+                                <input class="form-check-input position-absolute" type="radio"
+                                       name="cs_packaging_choice"
+                                       id="cs_single_use"
+                                       value="single_use"
+                                       t-att-checked="'checked' if cs_packaging_choice == 'single_use' else None"/>
+                                <span class="cs-option-name">
+                                    <t t-if="cs_lang == 'nl'">Wegwerpverpakking</t>
+                                    <t t-elif="cs_lang == 'de'">Einwegverpackung</t>
+                                    <t t-else="">Single-use packaging</t>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col col-auto">
+                            <span class="o_wsale_delivery_price_badge float-end fw-bold" name="price">
+                                +&#160;€&#160;<span class="oe_currency_value"><t t-esc="_fee_val"/></span>
+                            </span>
+                        </div>
+                    </div>
+                    <t t-if="cs_explainer_single_use">
+                        <div class="text-muted mt-1"><t t-esc="cs_explainer_single_use"/></div>
+                    </t>
+                </label>
+
+            </div>
+        </div>
+    </template>
+</odoo>
