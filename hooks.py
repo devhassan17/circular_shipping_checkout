@@ -31,8 +31,13 @@ _POPUP_TEXTS = {
 }
 
 
+_INSTALL_DEFAULTS = {
+    'cs.product_allow_mode': 'include',
+}
+
+
 def post_init_hook(env):
-    """Seed info-popup texts on fresh install.
+    """Seed default config values and info-popup texts on fresh install.
 
     Only writes a value when the parameter does not exist yet, so custom
     text edited in the backend is never overwritten — not even on reinstall.
@@ -40,12 +45,12 @@ def post_init_hook(env):
     """
     cfg = env['ir.config_parameter'].sudo()
     seeded = []
-    for key, value in _POPUP_TEXTS.items():
+    for key, value in {**_INSTALL_DEFAULTS, **_POPUP_TEXTS}.items():
         if not cfg.get_param(key):
             cfg.set_param(key, value)
             seeded.append(key)
     if seeded:
-        _logger.info('circular_shipping: post_init_hook — seeded popup text param(s): %s', ', '.join(seeded))
+        _logger.info('circular_shipping: post_init_hook — seeded param(s): %s', ', '.join(seeded))
 
 
 # Parameters that are environment-specific and must be reconfigured after

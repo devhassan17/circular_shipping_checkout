@@ -122,7 +122,7 @@ class ResConfigSettings(models.TransientModel):
         ],
         string='Productfilter modus',
         config_parameter='cs.product_allow_mode',
-        default='all',
+        default='include',
     )
     cs_excluded_product_ids = fields.Many2many(
         'product.product',

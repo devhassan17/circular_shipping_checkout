@@ -296,7 +296,7 @@ class SaleOrder(models.Model):
         if cfg is None:
             cfg = self.env['ir.config_parameter'].sudo()
 
-        mode = cfg.get_param('cs.product_allow_mode', 'all')
+        mode = cfg.get_param('cs.product_allow_mode', 'include')
         _logger.info(
             'circular_shipping: product filter check — order=%s mode=%s',
             self.name, mode,
@@ -336,7 +336,7 @@ class SaleOrder(models.Model):
         if mode == 'include':
             included_ids = _load_ids('cs.included_product_ids')
             if not included_ids:
-                return True, 'Available'
+                return False, 'Geen producten geconfigureerd voor statiegeld verpakking'
             unlisted = cart_product_ids - included_ids
             if unlisted:
                 names = ', '.join(self.env['product.product'].browse(list(unlisted)).mapped('name'))
