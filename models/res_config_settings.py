@@ -150,7 +150,7 @@ class ResConfigSettings(models.TransientModel):
         string='Vereist aantal',
         config_parameter='cs.required_total_qty',
         default=0,
-        help='Totaal aantal stuks van de toegestane producten dat exact in de bestelling aanwezig moet zijn. 0 = geen kwantiteitseis.',
+        help='Totaal aantal stuks van de toegestane producten dat exact in de bestelling aanwezig moet zijn. 0 = CS widget nooit actief (standaard bij eerste installatie).',
     )
 
     cs_box_image_url = fields.Char(
