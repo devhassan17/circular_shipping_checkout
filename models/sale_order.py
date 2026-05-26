@@ -347,18 +347,23 @@ class SaleOrder(models.Model):
                 return False, f'Bevat producten die niet zijn toegestaan: {names}'
 
             required_qty = int(cfg.get_param('cs.required_total_qty', '0') or '0')
-            if required_qty > 0:
-                cart_qty = sum(
-                    int(l.product_uom_qty) for l in self.order_line
-                    if not l.is_delivery and not l.is_cs_packaging and not l.is_cs_box
-                    and l.product_id and l.product_id.id in included_ids
+            if required_qty == 0:
+                _logger.info(
+                    'circular_shipping: product filter — required_total_qty=0, widget inactive for order %s',
+                    self.name,
                 )
-                if cart_qty != required_qty:
-                    _logger.info(
-                        'circular_shipping: product filter — qty mismatch: cart=%s required=%s for order %s',
-                        cart_qty, required_qty, self.name,
-                    )
-                    return False, f'Bestelling bevat {cart_qty} stuks; vereist is {required_qty}'
+                return False, 'Kwantiteitseis is 0 — CS widget niet actief'
+            cart_qty = sum(
+                int(l.product_uom_qty) for l in self.order_line
+                if not l.is_delivery and not l.is_cs_packaging and not l.is_cs_box
+                and l.product_id and l.product_id.id in included_ids
+            )
+            if cart_qty != required_qty:
+                _logger.info(
+                    'circular_shipping: product filter — qty mismatch: cart=%s required=%s for order %s',
+                    cart_qty, required_qty, self.name,
+                )
+                return False, f'Bestelling bevat {cart_qty} stuks; vereist is {required_qty}'
 
             return True, 'Available'
 
