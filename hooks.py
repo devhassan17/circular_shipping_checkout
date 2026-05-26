@@ -32,6 +32,7 @@ _POPUP_TEXTS = {
 
 
 _INSTALL_DEFAULTS = {
+    'cs.enabled': 'False',
     'cs.product_allow_mode': 'include',
 }
 
@@ -53,27 +54,14 @@ def post_init_hook(env):
         _logger.info('circular_shipping: post_init_hook — seeded param(s): %s', ', '.join(seeded))
 
 
-# Parameters that are environment-specific and must be reconfigured after
-# a reinstall: delivery method and product filter settings.
-_REINSTALL_CLEAR_KEYS = (
-    'cs.enabled',
-    'cs.office_delivery_carrier_id',
-    'cs.product_allow_mode',
-    'cs.excluded_product_ids',
-    'cs.included_product_ids',
-    'cs.allowed_country_ids',
-    'cs.max_products',
-    'cs.required_total_qty',
-)
+# All settings survive uninstall so they are restored on reinstall.
+# _INSTALL_DEFAULTS seeds cs.enabled=False only on a genuine first install
+# (post_init_hook skips the key when it already exists).
+_REINSTALL_CLEAR_KEYS = ()
 
 
 def uninstall_hook(env):
-    """Clear environment-specific settings on uninstall.
-
-    Only the delivery method and product filter parameters are removed so
-    that a reinstall starts with a clean slate for those fields. All text
-    settings (popup copy, explainer labels, pricing) are left intact and
-    will carry over to the reinstalled module unchanged.
+    """No-op: all settings are preserved across uninstall/reinstall.
 
     On module upgrade (without uninstall) this hook does not run.
     """
