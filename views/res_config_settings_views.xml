@@ -49,9 +49,9 @@
                             <div class="d-flex align-items-center gap-3">
                                 <div class="flex-grow-1">
                                     <div class="fw-bold">Contrast mode widget</div>
-                                    <small class="text-muted">Toont de verpakkingswidget met een roze achtergrond en roze rand.</small>
+                                    <small class="text-muted">Toont de verpakkingswidget met een roze achtergrond en roze rand. Vastgesteld — kan niet worden gewijzigd.</small>
                                 </div>
-                                <field name="cs_dark_mode" widget="boolean_toggle"/>
+                                <field name="cs_dark_mode" widget="boolean_toggle" readonly="1"/>
                             </div>
                         </div>
                     </block>
@@ -63,8 +63,8 @@
                         <setting string="Toeslag wegwerp (EUR)" help="Opslag die bij wegwerpverpakking in rekening wordt gebracht.">
                             <field name="cs_single_use_fee"/>
                         </setting>
-                        <setting string="Prijsmodel" help="Bepaalt hoe de verpakkingskosten worden berekend.">
-                            <field name="cs_pricing_model"/>
+                        <setting string="Prijsmodel" help="Bepaalt hoe de verpakkingskosten worden berekend. Vastgesteld — kan niet worden gewijzigd.">
+                            <field name="cs_pricing_model" readonly="1"/>
                         </setting>
                     </block>
 

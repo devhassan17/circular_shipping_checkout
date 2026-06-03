@@ -57,13 +57,22 @@ class SaleOrder(models.Model):
             cs_total = sum(l.price_subtotal for l in order.order_line if l.is_cs_packaging)
             order.cs_amount_surcharge = cs_total if order.cs_packaging_type == 'single_use' else 0.0
 
+    def _cs_website(self):
+        """Return the website that owns the CS settings for this order.
+
+        Falls back to the current website when the order has no `website_id`
+        (e.g. backend-created orders).
+        """
+        self.ensure_one()
+        return self.website_id or self.env['website'].get_current_website()
+
     def _get_cs_config(self):
-        """Return plugin config from ir.config_parameter."""
-        cfg = self.env['ir.config_parameter'].sudo()
+        """Return plugin config from the website settings."""
+        w = self._cs_website()
         return {
-            'deposit_amount': float(cfg.get_param('cs.deposit_amount', '3.95')),
-            'single_use_fee': float(cfg.get_param('cs.single_use_fee', '0.25')),
-            'pricing_model':  cfg.get_param('cs.pricing_model', 'direct'),
+            'deposit_amount': w.cs_deposit_amount or 3.95,
+            'single_use_fee': w.cs_single_use_fee or 0.25,
+            'pricing_model':  w.cs_pricing_model or 'direct',
         }
 
     def _apply_packaging_fee(self, packaging_type):
@@ -164,13 +173,14 @@ class SaleOrder(models.Model):
         :param is_delivery: When True the line contributes to amount_delivery and
                             appears in the delivery totals row instead of packaging row.
         """
+        taxes = self.fiscal_position_id.map_tax(product.taxes_id) if self.fiscal_position_id else product.taxes_id
         vals = {
             'order_id':        self.id,
             'product_id':      product.id,
             'name':            name or product.name,
             'product_uom_qty': 1,
             'price_unit':      price_unit,
-            'tax_id':          [],
+            'tax_id':          [(6, 0, taxes.ids)],
             'is_cs_packaging': True,
             'is_delivery':     is_delivery,
         }
@@ -229,7 +239,7 @@ class SaleOrder(models.Model):
         Returns (bool, str) — (is_eligible, reason).
         """
         self.ensure_one()
-        cfg = self.env['ir.config_parameter'].sudo()
+        w = self._cs_website()
 
         carrier = getattr(self, 'carrier_id', None)
         _logger.info(
@@ -254,11 +264,10 @@ class SaleOrder(models.Model):
                 return False, 'In-store pickup — no packaging needed'
 
         # Country allowlist (only enforced when configured)
-        allowed_raw = cfg.get_param('cs.allowed_country_ids', '')
-        if allowed_raw:
-            allowed_ids = {int(x) for x in allowed_raw.split(',') if x.strip().isdigit()}
+        allowed_countries = w.cs_allowed_country_ids
+        if allowed_countries:
             country = self.partner_shipping_id.country_id
-            if country and country.id not in allowed_ids:
+            if country and country not in allowed_countries:
                 _logger.info(
                     'circular_shipping: eligibility — country %s not in allowlist for order %s',
                     country.code, self.name,
@@ -266,7 +275,7 @@ class SaleOrder(models.Model):
                 return False, f'Service not available in {country.name}'
 
         # Max-quantity cap (0 = no limit)
-        max_qty = int(cfg.get_param('cs.max_products', '0') or '0')
+        max_qty = w.cs_max_products or 0
         if max_qty > 0:
             total_qty = sum(
                 l.product_uom_qty for l in self.order_line
@@ -280,23 +289,22 @@ class SaleOrder(models.Model):
                 return False, f'Order has {int(total_qty)} items; maximum is {max_qty}'
 
         # Product inclusion filter (only enforced when configured)
-        eligible, reason = self._check_cs_product_filter(cfg)
+        eligible, reason = self._check_cs_product_filter(w)
         if not eligible:
             return False, reason
 
         _logger.info('circular_shipping: eligibility result — order=%s eligible=True reason="Available"', self.name)
         return True, 'Available'
 
-    def _check_cs_product_filter(self, cfg=None):
+    def _check_cs_product_filter(self, website=None):
         """Three-mode product filter: all / exclude / include.
 
         Returns (True, 'Available') when the filter passes, or (False, reason).
         """
         self.ensure_one()
-        if cfg is None:
-            cfg = self.env['ir.config_parameter'].sudo()
+        w = website or self._cs_website()
 
-        mode = cfg.get_param('cs.product_allow_mode', 'include')
+        mode = w.cs_product_allow_mode or 'include'
         _logger.info(
             'circular_shipping: product filter check — order=%s mode=%s',
             self.name, mode,
@@ -317,12 +325,12 @@ class SaleOrder(models.Model):
         if not cart_product_ids:
             return True, 'Available'
 
-        def _load_ids(param_key):
-            raw = cfg.get_param(param_key, '')
-            return {int(x) for x in raw.split(',') if x.strip().isdigit()} if raw else set()
+        # Use active_test=False so a product temporarily archived by a sync/import
+        # (e.g. Monta) does not silently shrink the configured list and break the filter.
+        w_all = w.with_context(active_test=False)
 
         if mode == 'exclude':
-            excluded_ids = _load_ids('cs.excluded_product_ids')
+            excluded_ids = set(w_all.cs_excluded_product_ids.ids)
             restricted = cart_product_ids & excluded_ids
             if restricted:
                 names = ', '.join(self.env['product.product'].browse(list(restricted)).mapped('name'))
@@ -334,7 +342,7 @@ class SaleOrder(models.Model):
             return True, 'Available'
 
         if mode == 'include':
-            included_ids = _load_ids('cs.included_product_ids')
+            included_ids = set(w_all.cs_included_product_ids.ids)
             if not included_ids:
                 return False, 'Geen producten geconfigureerd voor statiegeld verpakking'
             unlisted = cart_product_ids - included_ids
@@ -346,7 +354,7 @@ class SaleOrder(models.Model):
                 )
                 return False, f'Bevat producten die niet zijn toegestaan: {names}'
 
-            required_qty = int(cfg.get_param('cs.required_total_qty', '0') or '0')
+            required_qty = w.cs_required_total_qty or 0
             if required_qty == 0:
                 _logger.info(
                     'circular_shipping: product filter — required_total_qty=0, widget inactive for order %s',
@@ -373,13 +381,13 @@ class SaleOrder(models.Model):
         """
         Check Boxo API for postcode availability.
         Pattern: boxo_return/models/sale_order.py::check_boxo_postcode_availability
-        Config: ir.config_parameter (cs.test_mode, boxo.api_key, boxo.api_url)
+        Config: website fields (cs_test_mode, boxo_api_key, boxo_api_url).
         """
         self.ensure_one()
-        cfg       = self.env['ir.config_parameter'].sudo()
-        test_mode = cfg.get_param('cs.test_mode', 'False') == 'True'
-        api_key   = cfg.get_param('boxo.api_key', '')
-        api_base  = (cfg.get_param('boxo.api_url', '') or 'https://api.boxo.nu').rstrip('/')
+        w         = self._cs_website()
+        test_mode = bool(w.cs_test_mode)
+        api_key   = w.boxo_api_key or ''
+        api_base  = (w.boxo_api_url or 'https://api.boxo.nu').rstrip('/')
 
         if test_mode:
             _logger.info('circular_shipping: test mode — Boxo API skipped, available=True for postcode=%s', postcode)
@@ -442,21 +450,18 @@ class SaleOrder(models.Model):
         if self.cs_packaging_type != 'reusable':
             return
 
-        cfg = self.env['ir.config_parameter'].sudo()
-        office_carrier_id_raw = cfg.get_param('cs.office_delivery_carrier_id', '')
-        if not office_carrier_id_raw or not office_carrier_id_raw.strip().isdigit():
+        office_carrier = self._cs_website().cs_office_delivery_carrier_id
+        if not office_carrier:
             _logger.warning(
                 'circular_shipping: office delivery carrier not configured — '
                 'carrier NOT swapped for reusable order %s', self.name,
             )
             return
-
-        office_carrier = self.env['delivery.carrier'].sudo().browse(int(office_carrier_id_raw))
         if not office_carrier.exists() or not office_carrier.active:
             _logger.warning(
                 'circular_shipping: office delivery carrier id=%s not found or inactive — '
                 'carrier NOT swapped for reusable order %s',
-                office_carrier_id_raw, self.name,
+                office_carrier.id, self.name,
             )
             return
 
