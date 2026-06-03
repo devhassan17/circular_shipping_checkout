@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
-    'name': 'Circular Shipping — Packaging Choice v1.1',
-    'version': '18.0.1.1',
+    'name': 'Circular Shipping — Packaging Choice v1.2',
+    'version': '18.0.1.0.1.2',
     'category': 'eCommerce',
     'summary': 'Reusable vs single-use packaging choice at checkout with deposit and A/B testing',
     'author': 'Circular Shipping Company B.V.',
@@ -31,7 +31,6 @@
     },
     'external_dependencies': {'python': ['requests']},
     'post_init_hook': 'post_init_hook',
-    'uninstall_hook': 'uninstall_hook',
     'installable': True,
     'application': False,
     'auto_install': False,

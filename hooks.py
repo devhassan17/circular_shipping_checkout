@@ -1,11 +1,24 @@
 # -*- coding: utf-8 -*-
+"""Install hook for circular_shipping_checkout.
+
+Settings storage moved from ir.config_parameter to fields on `website` in
+v18.0.2.0. The upgrade migration lives in `migrations/18.0.2.0/post-migrate.py`
+and runs automatically when Odoo detects the version bump.
+
+The earlier uninstall_hook / _REINSTALL_CLEAR_KEYS plumbing is no longer
+needed — settings now live on persistent `website` rows, not in the global
+ir.config_parameter table.
+
+post_init_hook seeds the Moyee-branded popup copy on every website only when
+not already set, so operator-edited copy is never overwritten.
+"""
 import logging
 
 _logger = logging.getLogger(__name__)
 
 
-_POPUP_TEXTS = {
-    'cs.popup_text.nl': (
+_DEFAULT_POPUP_TEXTS = {
+    'cs_popup_text_nl': (
         '<p>Kies voor <strong>statiegeld verpakking</strong> en ontvang je koffie in '
         'herbruikbaar, duurzaam verpakkingsmateriaal. Bij retour ontvang je het statiegeld '
         'terug.</p>'
@@ -13,14 +26,14 @@ _POPUP_TEXTS = {
         'target="_blank" rel="noopener">'
         'Meer informatie over ons duurzame verpakkingssysteem →</a></p>'
     ),
-    'cs.popup_text.en': (
+    'cs_popup_text_en': (
         '<p>Choose <strong>deposit packaging</strong> and receive your coffee in reusable, '
         'sustainable packaging. Return the packaging and get your deposit back.</p>'
         '<p><a href="https://www.moyeecoffee.com/en/circular-shipping-company" '
         'target="_blank" rel="noopener">'
         'More information about our sustainable packaging system →</a></p>'
     ),
-    'cs.popup_text.de': (
+    'cs_popup_text_de': (
         '<p>Wählen Sie <strong>Pfandverpackung</strong> und erhalten Sie Ihren Kaffee '
         'in wiederverwendbarem, nachhaltigem Verpackungsmaterial. Bei Rückgabe erhalten '
         'Sie das Pfand zurück.</p>'
@@ -31,45 +44,24 @@ _POPUP_TEXTS = {
 }
 
 
-_INSTALL_DEFAULTS = {
-    'cs.enabled': 'False',
-    'cs.product_allow_mode': 'include',
-}
-
-
 def post_init_hook(env):
-    """Seed default config values and info-popup texts on fresh install.
+    """Seed default popup copy on every website if not already set.
 
-    Only writes a value when the parameter does not exist yet, so custom
-    text edited in the backend is never overwritten — not even on reinstall.
-    On upgrade this hook does not run at all.
+    Idempotent: only writes a field when its current value is empty, so any
+    text the operator has customised is left untouched.
     """
-    cfg = env['ir.config_parameter'].sudo()
-    seeded = []
-    for key, value in {**_INSTALL_DEFAULTS, **_POPUP_TEXTS}.items():
-        if not cfg.get_param(key):
-            cfg.set_param(key, value)
-            seeded.append(key)
-    if seeded:
-        _logger.info('circular_shipping: post_init_hook — seeded param(s): %s', ', '.join(seeded))
-
-
-# All settings survive uninstall so they are restored on reinstall.
-# _INSTALL_DEFAULTS seeds cs.enabled=False only on a genuine first install
-# (post_init_hook skips the key when it already exists).
-_REINSTALL_CLEAR_KEYS = ()
-
-
-def uninstall_hook(env):
-    """No-op: all settings are preserved across uninstall/reinstall.
-
-    On module upgrade (without uninstall) this hook does not run.
-    """
-    cfg = env['ir.config_parameter'].sudo()
-    params = cfg.search([('key', 'in', list(_REINSTALL_CLEAR_KEYS))])
-    if params:
-        _logger.info(
-            'circular_shipping: uninstall_hook — removing %d config parameter(s): %s',
-            len(params), ', '.join(params.mapped('key')),
-        )
-        params.unlink()
+    seeded_total = 0
+    for website in env['website'].sudo().search([]):
+        vals = {}
+        for field_name, default_value in _DEFAULT_POPUP_TEXTS.items():
+            if not website[field_name]:
+                vals[field_name] = default_value
+        if vals:
+            website.write(vals)
+            seeded_total += len(vals)
+            _logger.info(
+                'circular_shipping: post_init_hook — seeded %d popup field(s) on website id=%s: %s',
+                len(vals), website.id, ', '.join(sorted(vals.keys())),
+            )
+    if seeded_total == 0:
+        _logger.info('circular_shipping: post_init_hook — no popup defaults needed (all already set)')
