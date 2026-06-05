@@ -15,6 +15,7 @@
         <field name="list_price">0.25</field>
         <field name="sale_ok" eval="False"/>
         <field name="purchase_ok" eval="False"/>
+        <field name="taxes_id" eval="[]"/>
     </record>
 
     <record id="product_cs_box" model="product.template">
