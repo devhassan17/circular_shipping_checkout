@@ -173,14 +173,18 @@ class SaleOrder(models.Model):
         :param is_delivery: When True the line contributes to amount_delivery and
                             appears in the delivery totals row instead of packaging row.
         """
-        taxes = self.fiscal_position_id.map_tax(product.taxes_id) if self.fiscal_position_id else product.taxes_id
+        taxes = product.taxes_id._filter_taxes_by_company(self.company_id)
+        if self.partner_id and self.fiscal_position_id:
+            taxes_ids = self.fiscal_position_id.map_tax(taxes).ids
+        else:
+            taxes_ids = taxes.ids
         vals = {
             'order_id':        self.id,
             'product_id':      product.id,
             'name':            name or product.name,
             'product_uom_qty': 1,
             'price_unit':      price_unit,
-            'tax_id':          [(6, 0, taxes.ids)],
+            'tax_id':          [(6, 0, taxes_ids)],
             'is_cs_packaging': True,
             'is_delivery':     is_delivery,
         }
