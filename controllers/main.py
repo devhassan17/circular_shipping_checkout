@@ -55,7 +55,8 @@ class WebsiteSaleCircularShipping(WebsiteSale):
 
     @http.route()
     def cart(self, *args, **kwargs):
-        self._cs_clear_packaging()
+        if request.website.cs_enabled:
+            self._cs_clear_packaging()
         return super().cart(*args, **kwargs)
 
     def _prepare_checkout_page_values(self, order_sudo, **kwargs):
@@ -155,9 +156,10 @@ class WebsiteSaleCircularShipping(WebsiteSale):
     @http.route()
     def shop_payment(self, **post):
         """Override payment page to inject CS template variables via qcontext."""
-        _order = request.website.sale_get_order()
-        if _order:
-            _order.sudo()._ensure_cs_box_line()
+        if request.website.cs_enabled:
+            _order = request.website.sale_get_order()
+            if _order:
+                _order.sudo()._ensure_cs_box_line()
 
         response = super().shop_payment(**post)
         if hasattr(response, 'qcontext'):
@@ -226,14 +228,15 @@ class WebsiteSaleCircularShipping(WebsiteSale):
         result = super().cart_update_json(
             product_id, line_id=line_id, add_qty=add_qty, set_qty=set_qty, **kwargs,
         )
-        order = request.website.sale_get_order()
-        if order:
-            eligible, reason = order._check_cs_eligibility()
-            _logger.info(
-                'circular_shipping: cart changed — product_id=%s add_qty=%s set_qty=%s '
-                'order=%s eligible=%s reason="%s"',
-                product_id, add_qty, set_qty, order.name, eligible, reason,
-            )
+        if request.website.cs_enabled:
+            order = request.website.sale_get_order()
+            if order:
+                eligible, reason = order._check_cs_eligibility()
+                _logger.info(
+                    'circular_shipping: cart changed — product_id=%s add_qty=%s set_qty=%s '
+                    'order=%s eligible=%s reason="%s"',
+                    product_id, add_qty, set_qty, order.name, eligible, reason,
+                )
         return result
 
     # ── AJAX: clear packaging choice (e.g. user navigates away and back) ─────

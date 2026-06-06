@@ -489,8 +489,15 @@ class SaleOrder(models.Model):
         receive the office carrier. Reusable orders are never routed to Monta.
         Orders that never passed through the CS widget (cs_packaging_type=False)
         are left untouched.
+
+        Gated on the per-website master switch: when the plugin is disabled the
+        confirmation must behave as if the module were not installed, even for
+        an order that still carries a stale cs_packaging_type from before it was
+        switched off — no carrier swap, no fee re-application.
         """
         for order in self:
+            if not order._cs_website().cs_enabled:
+                continue
             if order.cs_packaging_type == 'reusable':
                 order._cs_post_payment_carrier_swap()
             if order.cs_packaging_type and not order.order_line.filtered(lambda l: l.is_cs_packaging):
