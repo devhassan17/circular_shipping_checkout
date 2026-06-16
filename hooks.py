@@ -31,9 +31,37 @@ _POPUP_TEXTS = {
 }
 
 
+_BOX_IMAGE_URL = 'https://moyeecoffee.odoo.com/web/image/ir.attachment/86165/datas'
+
+
+_EXPLAINER_TEXTS = {
+    'cs.explainer_reusable.nl': (
+        'Je betaalt statiegeld, dat je weer terug krijgt bij het inleveren van deze '
+        'hebruikbare verpakking!'
+    ),
+    'cs.explainer_reusable.en': (
+        'You pay a deposit, which you get back when you return this reusable packaging!'
+    ),
+    'cs.explainer_reusable.de': (
+        'Sie zahlen eine Kaution, die Sie bei Rückgabe der wiederverwendbaren '
+        'Verpackung zurückerhalten!'
+    ),
+    'cs.explainer_single_use.nl': (
+        'Als je kiest voor een wegwerpverpakking betaal je een toeslag van €0,25'
+    ),
+    'cs.explainer_single_use.en': (
+        'If you choose for single-use, you pay a €0,25 surcharge'
+    ),
+    'cs.explainer_single_use.de': (
+        'Bei Wahl einer Einwegverpackung wird ein Aufpreis von 0,25 € fällig'
+    ),
+}
+
+
 _INSTALL_DEFAULTS = {
     'cs.enabled': 'False',
     'cs.product_allow_mode': 'include',
+    'cs.box_image_url': _BOX_IMAGE_URL,
 }
 
 
@@ -46,12 +74,16 @@ def post_init_hook(env):
     """
     cfg = env['ir.config_parameter'].sudo()
     seeded = []
-    for key, value in {**_INSTALL_DEFAULTS, **_POPUP_TEXTS}.items():
+    for key, value in {**_INSTALL_DEFAULTS, **_POPUP_TEXTS, **_EXPLAINER_TEXTS}.items():
         if not cfg.get_param(key):
             cfg.set_param(key, value)
             seeded.append(key)
     if seeded:
         _logger.info('circular_shipping: post_init_hook — seeded param(s): %s', ', '.join(seeded))
+
+    # Fetch and store the default box image when we just seeded its URL.
+    if 'cs.box_image_url' in seeded:
+        env['res.config.settings']._sync_cs_box_image(_BOX_IMAGE_URL)
 
 
 # All settings survive uninstall so they are restored on reinstall.
