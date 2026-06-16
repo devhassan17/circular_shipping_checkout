@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 {
-    'name': 'Circular Shipping — Packaging Choice v1.1',
+    'name': 'Circular Shipping — Packaging Choice v1.2.1',
     'version': '18.0.1.1',
     'category': 'eCommerce',
     'summary': 'Reusable vs single-use packaging choice at checkout with deposit and A/B testing',
