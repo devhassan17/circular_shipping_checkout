@@ -47,6 +47,15 @@ CS_POPUP_TEXT_DE = (
     'Mehr Informationen über unser nachhaltiges Verpackungssystem →</a></p>'
 )
 
+# Default one-line explainer copy shown under each choice in the widget
+# (editable afterwards — same seeding model as the popup texts above).
+CS_EXPLAINER_REUSABLE_NL = 'Je borg wordt geretourneerd bij inlevering'
+CS_EXPLAINER_REUSABLE_EN = 'Your deposit is returned when packaging is collected'
+CS_EXPLAINER_REUSABLE_DE = 'Ihr Pfand wird bei Rückgabe erstattet'
+CS_EXPLAINER_SINGLE_USE_NL = 'Standaard bezorgverpakking'
+CS_EXPLAINER_SINGLE_USE_EN = 'Standard delivery packaging'
+CS_EXPLAINER_SINGLE_USE_DE = 'Standard Lieferverpackung'
+
 
 class Website(models.Model):
     _inherit = 'website'
@@ -122,12 +131,24 @@ class Website(models.Model):
         string='Info popup tekst — DE', sanitize=True, default=lambda self: CS_POPUP_TEXT_DE,
     )
 
-    cs_explainer_reusable_nl = fields.Char(string='Uitleg statiegeld — NL')
-    cs_explainer_reusable_en = fields.Char(string='Explainer deposit — EN')
-    cs_explainer_reusable_de = fields.Char(string='Erklärung Pfand — DE')
-    cs_explainer_single_use_nl = fields.Char(string='Uitleg wegwerp — NL')
-    cs_explainer_single_use_en = fields.Char(string='Explainer single-use — EN')
-    cs_explainer_single_use_de = fields.Char(string='Erklärung Einweg — DE')
+    cs_explainer_reusable_nl = fields.Char(
+        string='Uitleg statiegeld — NL', default=lambda self: CS_EXPLAINER_REUSABLE_NL,
+    )
+    cs_explainer_reusable_en = fields.Char(
+        string='Explainer deposit — EN', default=lambda self: CS_EXPLAINER_REUSABLE_EN,
+    )
+    cs_explainer_reusable_de = fields.Char(
+        string='Erklärung Pfand — DE', default=lambda self: CS_EXPLAINER_REUSABLE_DE,
+    )
+    cs_explainer_single_use_nl = fields.Char(
+        string='Uitleg wegwerp — NL', default=lambda self: CS_EXPLAINER_SINGLE_USE_NL,
+    )
+    cs_explainer_single_use_en = fields.Char(
+        string='Explainer single-use — EN', default=lambda self: CS_EXPLAINER_SINGLE_USE_EN,
+    )
+    cs_explainer_single_use_de = fields.Char(
+        string='Erklärung Einweg — DE', default=lambda self: CS_EXPLAINER_SINGLE_USE_DE,
+    )
 
     # ── Geographic / quantity gating ────────────────────────────────────────
     cs_allowed_country_ids = fields.Many2many(

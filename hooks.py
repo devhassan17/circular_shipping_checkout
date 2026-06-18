@@ -18,7 +18,21 @@ def post_init_hook(env):
     """Seed default settings on every existing website if not already set."""
     from .models.website import (
         CS_POPUP_TEXT_NL, CS_POPUP_TEXT_EN, CS_POPUP_TEXT_DE,
+        CS_EXPLAINER_REUSABLE_NL, CS_EXPLAINER_REUSABLE_EN, CS_EXPLAINER_REUSABLE_DE,
+        CS_EXPLAINER_SINGLE_USE_NL, CS_EXPLAINER_SINGLE_USE_EN, CS_EXPLAINER_SINGLE_USE_DE,
     )
+
+    text_defaults = {
+        'cs_popup_text_nl': CS_POPUP_TEXT_NL,
+        'cs_popup_text_en': CS_POPUP_TEXT_EN,
+        'cs_popup_text_de': CS_POPUP_TEXT_DE,
+        'cs_explainer_reusable_nl': CS_EXPLAINER_REUSABLE_NL,
+        'cs_explainer_reusable_en': CS_EXPLAINER_REUSABLE_EN,
+        'cs_explainer_reusable_de': CS_EXPLAINER_REUSABLE_DE,
+        'cs_explainer_single_use_nl': CS_EXPLAINER_SINGLE_USE_NL,
+        'cs_explainer_single_use_en': CS_EXPLAINER_SINGLE_USE_EN,
+        'cs_explainer_single_use_de': CS_EXPLAINER_SINGLE_USE_DE,
+    }
 
     deposit = env.ref('circular_shipping_checkout.product_packaging_deposit', raise_if_not_found=False)
     single_use = env.ref('circular_shipping_checkout.product_single_use_fee', raise_if_not_found=False)
@@ -26,12 +40,9 @@ def post_init_hook(env):
     seeded_total = 0
     for website in env['website'].sudo().search([]):
         vals = {}
-        if not website.cs_popup_text_nl:
-            vals['cs_popup_text_nl'] = CS_POPUP_TEXT_NL
-        if not website.cs_popup_text_en:
-            vals['cs_popup_text_en'] = CS_POPUP_TEXT_EN
-        if not website.cs_popup_text_de:
-            vals['cs_popup_text_de'] = CS_POPUP_TEXT_DE
+        for field_name, default_value in text_defaults.items():
+            if not website[field_name]:
+                vals[field_name] = default_value
         if not website.boxo_api_url:
             vals['boxo_api_url'] = 'https://api.boxo.nu'
         if deposit and not website.cs_deposit_product_id:
