@@ -61,8 +61,7 @@ class WebsiteSaleCircularShipping(WebsiteSale):
     def _prepare_checkout_page_values(self, order_sudo, **kwargs):
         """Inject CS packaging widget variables into the checkout page context."""
         values = super()._prepare_checkout_page_values(order_sudo, **kwargs)
-        cfg = request.env['ir.config_parameter'].sudo()
-        if cfg.get_param('cs.enabled', 'True') == 'True':
+        if request.website.sudo().cs_enabled:
             order_sudo._ensure_cs_box_line()
         values.update(self._cs_get_payment_values(order_sudo))
         return values
@@ -71,8 +70,8 @@ class WebsiteSaleCircularShipping(WebsiteSale):
 
     def _cs_get_payment_values(self, order):
         """Build CS-specific template variables for the payment page."""
-        cfg = request.env['ir.config_parameter'].sudo()
-        if cfg.get_param('cs.enabled', 'True') != 'True':
+        ws = request.website.sudo()
+        if not ws.cs_enabled:
             return {
                 'cs_packaging_config':     {},
                 'cs_test_mode':            False,
@@ -92,16 +91,16 @@ class WebsiteSaleCircularShipping(WebsiteSale):
             }
         _lang_code = request.lang.code
         lang_key = 'nl' if _lang_code.startswith('nl') else ('de' if _lang_code.startswith('de') else 'en')
-        popup_text_raw = cfg.get_param(f'cs.popup_text.{lang_key}', '') or cfg.get_param('cs.popup_text', '')
+        popup_text_raw = getattr(ws, f'cs_popup_text_{lang_key}') or ''
         cs_popup_text = Markup(popup_text_raw) if popup_text_raw else Markup('')
-        cs_explainer_reusable   = cfg.get_param(f'cs.explainer_reusable.{lang_key}', '') or ''
-        cs_explainer_single_use = cfg.get_param(f'cs.explainer_single_use.{lang_key}', '') or ''
-        test_mode = cfg.get_param('cs.test_mode', 'False') == 'True'
+        cs_explainer_reusable   = getattr(ws, f'cs_explainer_reusable_{lang_key}') or ''
+        cs_explainer_single_use = getattr(ws, f'cs_explainer_single_use_{lang_key}') or ''
+        test_mode = ws.cs_test_mode
         _full_config = {
-            'deposit_amount':    float(cfg.get_param('cs.deposit_amount',    '3.95')),
-            'single_use_fee':    float(cfg.get_param('cs.single_use_fee',    '0.25')),
-            'pricing_model':     cfg.get_param('cs.pricing_model',           'direct'),
-            'default_selection': cfg.get_param('cs.default_selection',       'single_use'),
+            'deposit_amount':    ws.cs_deposit_amount or 0.0,
+            'single_use_fee':    ws.cs_single_use_fee or 0.0,
+            'pricing_model':     ws.cs_pricing_model or 'direct',
+            'default_selection': ws.cs_default_selection or 'single_use',
         }
         current_choice = ''
         if order:
@@ -123,8 +122,8 @@ class WebsiteSaleCircularShipping(WebsiteSale):
         except Exception:
             pass
 
-        cs_box_image_url = cfg.get_param('cs.box_image_url', '') or ''
-        dark_mode = cfg.get_param('cs.dark_mode', 'False') == 'True'
+        cs_box_image_url = ws.cs_box_image_url or ''
+        dark_mode = ws.cs_dark_mode
 
         return {
             'cs_packaging_config':   {k: v for k, v in _full_config.items() if k in _CS_FRONTEND_ALLOWLIST},
@@ -172,8 +171,7 @@ class WebsiteSaleCircularShipping(WebsiteSale):
 
     @http.route('/cs/set_packaging_choice', type='json', auth='public', website=True)
     def set_packaging_choice(self, choice=None, **kwargs):
-        cfg = request.env['ir.config_parameter'].sudo()
-        if cfg.get_param('cs.enabled', 'True') != 'True':
+        if not request.website.sudo().cs_enabled:
             return {'ok': False, 'error': 'plugin_disabled'}
         last_call = request.session.get('cs_last_set_ts', 0)
         now = time.time()
@@ -242,8 +240,7 @@ class WebsiteSaleCircularShipping(WebsiteSale):
 
     @http.route('/cs/clear_packaging_choice', type='json', auth='public', website=True)
     def clear_packaging_choice(self, **kwargs):
-        cfg = request.env['ir.config_parameter'].sudo()
-        if cfg.get_param('cs.enabled', 'True') != 'True':
+        if not request.website.sudo().cs_enabled:
             return {'ok': True}
         order = request.website.sale_get_order()
         if not order:
@@ -276,8 +273,7 @@ class WebsiteSaleCircularShipping(WebsiteSale):
 
     @http.route('/cs/check_postcode', type='json', auth='public', website=True)
     def check_postcode(self, postcode=None, **kwargs):
-        cfg = request.env['ir.config_parameter'].sudo()
-        if cfg.get_param('cs.enabled', 'True') != 'True':
+        if not request.website.sudo().cs_enabled:
             return {'available': False}
         if not postcode:
             return {'available': False}
@@ -299,8 +295,7 @@ class WebsiteSaleCircularShipping(WebsiteSale):
 
     @http.route('/cs/check_current_address', type='json', auth='public', website=True)
     def check_current_address(self, **kwargs):
-        cfg = request.env['ir.config_parameter'].sudo()
-        if cfg.get_param('cs.enabled', 'True') != 'True':
+        if not request.website.sudo().cs_enabled:
             return {'available': False, 'postcode': ''}
         order = request.website.sale_get_order()
         if not order or not order.partner_shipping_id:
@@ -333,11 +328,11 @@ class WebsiteSaleCircularShipping(WebsiteSale):
     # ── Internal: A/B variant assignment ──────────────────────────────────────
 
     def _get_ab_variant(self):
-        cfg = request.env['ir.config_parameter'].sudo()
-        if cfg.get_param('cs.ab_test_enabled', 'False') != 'True':
+        ws = request.website.sudo()
+        if not ws.cs_ab_test_enabled:
             return ''
         if 'cs_ab_variant' not in request.session:
-            ratio   = float(cfg.get_param('cs.ab_split_ratio', '0.5'))
+            ratio   = ws.cs_ab_split_ratio or 0.5
             sid     = request.session.sid or ''
             h       = int(hashlib.sha256(sid.encode()).hexdigest(), 16)
             variant = 'A' if (h % 1000) / 1000 < ratio else 'B'
