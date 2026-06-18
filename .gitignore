@@ -1,0 +1,7 @@
+# Example/reference plugin — not part of this module, never push to remote
+/odoo-boxo_return-18.0.1.0.1/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
