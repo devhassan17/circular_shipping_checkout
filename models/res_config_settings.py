@@ -10,7 +10,10 @@ get_values/set_values + ir.config_parameter approach suffered from.
 ``website_id`` is provided by the ``website`` module's res.config.settings and
 defaults to the current website.
 """
-from odoo import fields, models
+from odoo import api, fields, models
+
+# Website the Circular Shipping settings panel opens on by default.
+CS_DEFAULT_WEBSITE_NAME = 'Moyee Digital (b2c)'
 
 
 class ResConfigSettings(models.TransientModel):
@@ -57,3 +60,21 @@ class ResConfigSettings(models.TransientModel):
 
     cs_box_image_url = fields.Char(related='website_id.cs_box_image_url', readonly=False)
     cs_dark_mode = fields.Boolean(related='website_id.cs_dark_mode', readonly=False)
+
+    @api.model
+    def default_get(self, fields_list):
+        """Open the settings panel on the Moyee Digital (b2c) website by default.
+
+        Falls back to the standard website module default when that site is not
+        found (e.g. on a dev database), so this never breaks elsewhere.
+        """
+        res = super().default_get(fields_list)
+        if 'website_id' in fields_list:
+            website = self.env['website'].search(
+                [('name', '=ilike', CS_DEFAULT_WEBSITE_NAME)], limit=1,
+            ) or self.env['website'].search(
+                [('name', 'ilike', 'Moyee Digital')], limit=1,
+            )
+            if website:
+                res['website_id'] = website.id
+        return res
