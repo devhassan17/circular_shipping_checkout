@@ -11,6 +11,12 @@
                      name="circular_shipping_checkout"
                      logo="/circular_shipping_checkout/static/description/icon.png">
 
+                    <block title="Website">
+                        <setting string="Website" help="Deze instellingen gelden per website. Kies de website die u wilt configureren.">
+                            <field name="website_id" options="{'no_create': True}"/>
+                        </setting>
+                    </block>
+
                     <block title="Plugin status">
                         <div class="col-12 col-lg-6 px-3 pb-3">
                             <div class="d-flex align-items-center gap-3">
@@ -65,6 +71,12 @@
                         </setting>
                         <setting string="Prijsmodel" help="Bepaalt hoe de verpakkingskosten worden berekend.">
                             <field name="cs_pricing_model"/>
+                        </setting>
+                        <setting string="Borgproduct" help="Product dat als borgregel aan de bestelling wordt toegevoegd bij statiegeld verpakking.">
+                            <field name="cs_deposit_product_id" options="{'no_create': True}" domain="[('type', '=', 'service')]"/>
+                        </setting>
+                        <setting string="Wegwerptoeslagproduct" help="Product dat als toeslagregel aan de bestelling wordt toegevoegd bij wegwerpverpakking.">
+                            <field name="cs_single_use_product_id" options="{'no_create': True}" domain="[('type', '=', 'service')]"/>
                         </setting>
                     </block>
 

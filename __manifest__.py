@@ -31,7 +31,6 @@
     },
     'external_dependencies': {'python': ['requests']},
     'post_init_hook': 'post_init_hook',
-    'uninstall_hook': 'uninstall_hook',
     'installable': True,
     'application': False,
     'auto_install': False,

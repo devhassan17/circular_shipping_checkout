@@ -1,43 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- noupdate="1": seed these service/box products on install only. Module
-     upgrades must NOT re-apply them, so admin-edited prices and the box image
-     (set via the CSC Box image URL setting) survive every update. -->
-<odoo noupdate="1">
-    <record id="product_packaging_deposit" model="product.template">
-        <field name="name">Statiegeld verpakking</field>
-        <field name="type">service</field>
-        <field name="list_price">3.95</field>
-        <field name="sale_ok" eval="False"/>
-        <field name="purchase_ok" eval="False"/>
-        <field name="taxes_id" eval="[]"/>
-    </record>
+<odoo>
+    <!-- Service/fee products. These are only default targets for the website
+         settings cs_deposit_product_id / cs_single_use_product_id; the price
+         charged on an order comes from the website amount setting, not from
+         list_price here, so re-applying these on upgrade is harmless. -->
+    <data>
+        <record id="product_packaging_deposit" model="product.template">
+            <field name="name">Statiegeld verpakking</field>
+            <field name="type">service</field>
+            <field name="list_price">3.95</field>
+            <field name="sale_ok" eval="False"/>
+            <field name="purchase_ok" eval="False"/>
+            <field name="taxes_id" eval="[]"/>
+        </record>
 
-    <record id="product_single_use_fee" model="product.template">
-        <field name="name">Toeslag wegwerpverpakking</field>
-        <field name="type">service</field>
-        <field name="list_price">0.25</field>
-        <field name="sale_ok" eval="False"/>
-        <field name="purchase_ok" eval="False"/>
-        <field name="taxes_id" eval="[]"/>
-    </record>
+        <record id="product_single_use_fee" model="product.template">
+            <field name="name">Toeslag wegwerpverpakking</field>
+            <field name="type">service</field>
+            <field name="list_price">0.25</field>
+            <field name="sale_ok" eval="False"/>
+            <field name="purchase_ok" eval="False"/>
+            <field name="taxes_id" eval="[]"/>
+        </record>
 
-    <record id="product_cs_box" model="product.template">
-        <field name="name">CIRCULAR SHIPPING BOX</field>
-        <field name="type">consu</field>
-        <field name="list_price">0.00</field>
-        <field name="sale_ok" eval="False"/>
-        <field name="purchase_ok" eval="False"/>
-        <field name="taxes_id" eval="[]"/>
-        <!-- Place csc_box.png (or .jpg) at static/src/img/ before upgrading the module. -->
-        <field name="image_1920" type="base64" file="circular_shipping_checkout/static/src/img/csc_box.png"/>
-    </record>
+        <record id="product_statiegeld_discount" model="product.template">
+            <field name="name">Korting statiegeld verpakking</field>
+            <field name="type">service</field>
+            <field name="list_price">0.00</field>
+            <field name="sale_ok" eval="False"/>
+            <field name="purchase_ok" eval="False"/>
+            <field name="taxes_id" eval="[]"/>
+        </record>
+    </data>
 
-    <record id="product_statiegeld_discount" model="product.template">
-        <field name="name">Korting statiegeld verpakking</field>
-        <field name="type">service</field>
-        <field name="list_price">0.00</field>
-        <field name="sale_ok" eval="False"/>
-        <field name="purchase_ok" eval="False"/>
-        <field name="taxes_id" eval="[]"/>
-    </record>
+    <!-- Box product: noupdate so the admin image (set via the CSC Box image URL
+         setting, fetched onto image_1920) is never overwritten by the on-disk
+         file on a module upgrade. -->
+    <data noupdate="1">
+        <record id="product_cs_box" model="product.template">
+            <field name="name">CIRCULAR SHIPPING BOX</field>
+            <field name="type">consu</field>
+            <field name="list_price">0.00</field>
+            <field name="sale_ok" eval="False"/>
+            <field name="purchase_ok" eval="False"/>
+            <field name="taxes_id" eval="[]"/>
+            <!-- Place csc_box.png (or .jpg) at static/src/img/ before installing. -->
+            <field name="image_1920" type="base64" file="circular_shipping_checkout/static/src/img/csc_box.png"/>
+        </record>
+    </data>
 </odoo>
