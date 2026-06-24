@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_cs_exposure_event_list" model="ir.ui.view">
+        <field name="name">cs.exposure.event.list</field>
+        <field name="model">cs.exposure.event</field>
+        <field name="arch" type="xml">
+            <list string="Widget Exposure Events" create="false" edit="false">
+                <field name="create_date"/>
+                <field name="website_id"/>
+                <field name="session_key" optional="hide"/>
+                <field name="order_ref"/>
+                <field name="ab_variant"/>
+                <field name="widget_eligible"/>
+                <field name="postcode_serviceable"/>
+                <field name="packaging_choice"/>
+                <field name="furthest_stage"/>
+                <field name="stage1_payment_page_ts" optional="hide"/>
+                <field name="stage2_widget_ts" optional="hide"/>
+                <field name="stage3_proceed_payment_ts" optional="hide"/>
+                <field name="stage4_payment_confirmed_ts"/>
+                <field name="payment_captured"/>
+                <field name="order_total" sum="Total"/>
+                <field name="line_count" optional="hide"/>
+                <field name="decision_seconds" optional="hide"/>
+                <field name="time_to_confirm_seconds" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_cs_exposure_event_form" model="ir.ui.view">
+        <field name="name">cs.exposure.event.form</field>
+        <field name="model">cs.exposure.event</field>
+        <field name="arch" type="xml">
+            <form string="Widget Exposure Event" create="false" edit="false">
+                <sheet>
+                    <group>
+                        <group string="Identity (no PII)">
+                            <field name="session_key"/>
+                            <field name="website_id"/>
+                            <field name="order_id"/>
+                            <field name="order_ref"/>
+                            <field name="ab_variant"/>
+                        </group>
+                        <group string="Order">
+                            <field name="order_total"/>
+                            <field name="line_count"/>
+                            <field name="packaging_choice"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Funnel">
+                            <field name="stage1_payment_page_ts"/>
+                            <field name="stage2_widget_ts"/>
+                            <field name="stage3_proceed_payment_ts"/>
+                            <field name="stage4_payment_confirmed_ts"/>
+                            <field name="furthest_stage"/>
+                        </group>
+                        <group string="Widget / timing">
+                            <field name="widget_eligible"/>
+                            <field name="postcode_serviceable"/>
+                            <field name="not_shown_reason"/>
+                            <field name="choice_ts"/>
+                            <field name="payment_captured"/>
+                            <field name="decision_seconds"/>
+                            <field name="time_to_confirm_seconds"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_cs_exposure_event_search" model="ir.ui.view">
+        <field name="name">cs.exposure.event.search</field>
+        <field name="model">cs.exposure.event</field>
+        <field name="arch" type="xml">
+            <search string="Widget Exposure Events">
+                <field name="order_ref"/>
+                <field name="session_key"/>
+                <field name="ab_variant"/>
+                <filter name="eligible" string="Widget eligible" domain="[('widget_eligible','=',True)]"/>
+                <filter name="serviceable" string="Postcode serviceable" domain="[('postcode_serviceable','=',True)]"/>
+                <filter name="confirmed" string="Payment confirmed" domain="[('stage4_payment_confirmed_ts','!=',False)]"/>
+                <filter name="captured" string="Payment captured" domain="[('payment_captured','=',True)]"/>
+                <separator/>
+                <filter name="chose_reusable" string="Chose reusable" domain="[('packaging_choice','=','reusable')]"/>
+                <filter name="chose_single_use" string="Chose single use" domain="[('packaging_choice','=','single_use')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_eligible" string="Widget eligible" context="{'group_by': 'widget_eligible'}"/>
+                    <filter name="group_choice" string="Packaging choice" context="{'group_by': 'packaging_choice'}"/>
+                    <filter name="group_variant" string="A/B variant" context="{'group_by': 'ab_variant'}"/>
+                    <filter name="group_website" string="Website" context="{'group_by': 'website_id'}"/>
+                    <filter name="group_stage" string="Furthest stage" context="{'group_by': 'furthest_stage'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_cs_exposure_event" model="ir.actions.act_window">
+        <field name="name">Widget Exposure Events</field>
+        <field name="res_model">cs.exposure.event</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_cs_exposure_event_search"/>
+        <field name="context">{'search_default_eligible': 0}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No exposure events yet</p>
+            <p>One row is recorded per checkout that reaches the payment page,
+               tracking whether the packaging widget was shown and how far the
+               customer progressed.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_cs_exposure_event"
+              name="CS Widget Exposure"
+              parent="sale.sale_menu_root"
+              action="action_cs_exposure_event"
+              sequence="90"
+              groups="base.group_user"/>
+
+</odoo>

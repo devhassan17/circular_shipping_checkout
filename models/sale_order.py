@@ -490,10 +490,99 @@ class SaleOrder(models.Model):
         receive the office carrier. Reusable orders are never routed to Monta.
         Orders that never passed through the CS widget (cs_packaging_type=False)
         are left untouched.
+
+        Also stamps the exposure funnel's stage 4 (payment confirmed). We capture
+        which orders were *confirmable* BEFORE super() so we only stamp orders that
+        actually transitioned draft/sent -> sale on THIS call. This covers both
+        paid orders (confirmed via the payment flow) and free website orders
+        (confirmed via _validate_order), and avoids double-stamping when
+        action_confirm runs again on an already-confirmed order.
         """
+        was_confirmable = {order.id: order.state in ('draft', 'sent') for order in self}
         for order in self:
             if order.cs_packaging_type == 'reusable':
                 order._cs_post_payment_carrier_swap()
             if order.cs_packaging_type and not order.order_line.filtered(lambda l: l.is_cs_packaging):
                 order._apply_packaging_fee(order.cs_packaging_type)
-        return super().action_confirm()
+        res = super().action_confirm()
+        now = fields.Datetime.now()
+        for order in self:
+            if was_confirmable.get(order.id) and order.state == 'sale':
+                order._cs_log_event(
+                    stage4_payment_confirmed_ts=now,
+                    order_total=order.amount_total,
+                )
+        return res
+
+    # ── Exposure funnel tracking ──────────────────────────────────────────────
+    # The exposure event is keyed by order_id (NOT the HTTP session) so stages 3/4
+    # resolve the row even in payment-provider webhook/redirect contexts that carry
+    # no browser session. Timestamps are stamp-once; booleans are last-value.
+    # Writes go through sudo() and never raise into the checkout/payment flow.
+
+    # Datetime fields that must only be set the first time (never overwritten).
+    _CS_STAMP_ONCE_FIELDS = (
+        'stage1_payment_page_ts',
+        'stage2_widget_ts',
+        'stage3_proceed_payment_ts',
+        'stage4_payment_confirmed_ts',
+        'choice_ts',
+    )
+
+    def _cs_log_event(self, create_if_missing=False, **vals):
+        """Upsert each order's exposure event. Never raises into the caller.
+
+        Only stage 1 (the payment-page hook) passes create_if_missing=True. Every
+        later hook (stages 3/4, capture, choice, postcode) updates an existing row
+        but never creates one, so backend / non-website orders that never reached
+        the payment page do not pollute the table.
+        """
+        for order in self:
+            try:
+                order._cs_log_event_one(create_if_missing=create_if_missing, **vals)
+            except Exception:
+                _logger.exception(
+                    'circular_shipping: exposure tracking failed for order %s', order.id,
+                )
+
+    def _cs_log_event_one(self, create_if_missing=False, **vals):
+        self.ensure_one()
+        Event = self.env['cs.exposure.event'].sudo()
+        event = Event.search([('order_id', '=', self.id)], limit=1)
+        if not event:
+            if not create_if_missing:
+                return
+            base = {
+                'order_id':   self.id,
+                'order_ref':  self.name,
+                'website_id': self.website_id.id or False,
+                'ab_variant': self.cs_ab_variant or '',
+                'order_total': self.amount_total,
+                'line_count': len(self.order_line.filtered(
+                    lambda l: not l.is_delivery and not l.is_cs_packaging and not l.is_cs_box
+                )),
+            }
+            if 'session_key' in vals:
+                base['session_key'] = vals['session_key']
+            # Concurrent requests (payment render + availability + choice) can race
+            # to create the row. The unique(order_id) constraint makes the loser
+            # raise; recover inside a savepoint and re-read the winner's row.
+            try:
+                with self.env.cr.savepoint():
+                    event = Event.create(base)
+            except Exception:
+                event = Event.search([('order_id', '=', self.id)], limit=1)
+        if not event:
+            return
+
+        write_vals = {}
+        for key, value in vals.items():
+            if key == 'session_key':
+                continue  # only set on create
+            if key in self._CS_STAMP_ONCE_FIELDS and event[key]:
+                continue  # stamp-once: keep the first value
+            if event[key] == value:
+                continue  # last-value: skip no-op writes (collapses poll churn)
+            write_vals[key] = value
+        if write_vals:
+            event.write(write_vals)

@@ -4,7 +4,7 @@ import logging
 import re
 import time
 
-from odoo import http
+from odoo import fields, http
 from odoo.http import request
 from odoo.exceptions import UserError
 from markupsafe import Markup
@@ -162,8 +162,34 @@ class WebsiteSaleCircularShipping(WebsiteSale):
         response = super().shop_payment(**post)
         if hasattr(response, 'qcontext'):
             order = request.website.sale_get_order()
+            self._cs_track_payment_page(order)
             response.qcontext.update(self._cs_get_payment_values(order))
         return response
+
+    # ── Exposure funnel tracking helpers ──────────────────────────────────────
+
+    def _cs_session_key(self):
+        """Anonymous SHA-256 of the web session id (same primitive as A/B variant)."""
+        sid = request.session.sid or ''
+        return hashlib.sha256(sid.encode()).hexdigest() if sid else ''
+
+    def _cs_track_payment_page(self, order):
+        """Stage 1 (payment page reached) + Stage 2 (widget shown / not)."""
+        if not order or not request.website.sudo().cs_enabled:
+            return
+        now = fields.Datetime.now()
+        eligible, reason = order._check_cs_eligibility()
+        log_vals = {
+            'session_key':            self._cs_session_key(),
+            'stage1_payment_page_ts': now,
+            'widget_eligible':        eligible,
+            'not_shown_reason':       '' if eligible else (reason or ''),
+        }
+        if eligible:
+            # stamp-once "ever shown" marker
+            log_vals['stage2_widget_ts'] = now
+        # Stage 1 is the only hook that may create the event row.
+        order.sudo()._cs_log_event(create_if_missing=True, **log_vals)
 
     # ── AJAX: set packaging choice ────────────────────────────────────────────
     # Returns updated order totals (same fields as website_sale delivery widget)
@@ -191,6 +217,9 @@ class WebsiteSaleCircularShipping(WebsiteSale):
 
         ab_variant = self._get_ab_variant()
         order.sudo().write({'cs_ab_variant': ab_variant})
+
+        # Exposure funnel: record the packaging choice + decision timestamp.
+        order.sudo()._cs_log_event(packaging_choice=choice, choice_ts=fields.Datetime.now())
 
         Monetary = request.env['ir.qweb.field.monetary']
         currency = order.currency_id
@@ -287,7 +316,11 @@ class WebsiteSaleCircularShipping(WebsiteSale):
             return {'available': False}
 
         result = order.sudo().check_cs_postcode_availability(postcode)
-        return {'available': result.get('available', False)}
+        available = result.get('available', False)
+        # Exposure funnel: last-value postcode serviceability (the helper skips
+        # no-op writes, so repeated availability polls don't churn the DB).
+        order.sudo()._cs_log_event(postcode_serviceable=bool(available))
+        return {'available': available}
 
     # ── AJAX: check availability for the current order's shipping address ─────
     # Reads partner_shipping_id from the active order so the correct selected

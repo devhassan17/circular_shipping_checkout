@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
-    'name': 'Circular Shipping — Packaging Choice v1.2.1',
-    'version': '18.0.1.2',
+    'name': 'Circular Shipping — Packaging Choice v1.3',
+    'version': '18.0.1.3',
     'category': 'eCommerce',
     'summary': 'Reusable vs single-use packaging choice at checkout with deposit and A/B testing',
     'author': 'Circular Shipping Company B.V.',
@@ -18,6 +18,7 @@
         'data/product_data.xml',
         'views/res_config_settings_views.xml',
         'views/delivery_carrier_views.xml',
+        'views/cs_exposure_event_views.xml',
         'views/templates.xml',
     ],
     'assets': {
